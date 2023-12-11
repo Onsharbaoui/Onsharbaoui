@@ -56,10 +56,33 @@ data[non_numeric_columns] = imputer.fit_transform(data[non_numeric_columns])
 
 df = pd.get_dummies(data, columns=['HomePlanet','Cabin','Destination','Name'])
 
+# Prétraitement des données test
+## Nettoyage des données
+# Sélection des colonnes numériques existantes dans data_2
+numeric_columns_test = data_2.select_dtypes(include=['float64', 'int64']).columns
+
+# Imputation pour les colonnes numériques
+imputer_test = SimpleImputer(strategy='mean')
+data_2[numeric_columns_test] = imputer_test.fit_transform(data_2[numeric_columns_test])
+
+# Sélection des colonnes non numériques existantes dans data_2
+non_numeric_columns_test = data_2.select_dtypes(exclude=['float64', 'int64']).columns
+
+# Imputation pour les colonnes non numériques (par exemple, avec la stratégie 'most_frequent')
+imputer_test = SimpleImputer(strategy='most_frequent')
+data_2[non_numeric_columns_test] = imputer_test.fit_transform(data_2[non_numeric_columns_test])
+
+df_2 = pd.get_dummies(data_2, columns=['HomePlanet','Cabin','Destination','Name'])
+
 # Sélection des fonctionnalités (toutes les colonnes sauf la dernière qui est la cible)
 X = df.iloc[:, :-1]
 y = df.iloc[:, -1]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Divisez les données en ensembles d'entraînement et de test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Maintenant, assurez-vous que X_train et y_train correspondent
+print(len(X_train), len(y_train))  # Assurez-vous que ces deux nombres sont identiques
 
 # Application des algorithmes de machine learning
 ## Choix des algorithmes
@@ -80,6 +103,14 @@ nn_pred = nn.predict(X_test)
 print("Précision de l'arbre de décision : ", accuracy_score(y_test, tree_pred))
 print("Précision du réseau de neurones : ", accuracy_score(y_test, nn_pred))
 
+# Créez un DataFrame avec les prédictions des deux modèles
+predictions_df = pd.DataFrame({'Tree_Predictions': tree_pred, 'NN_Predictions': nn_pred})
+
+# Concaténez le DataFrame des prédictions avec l'ensemble de test
+X_test_with_predictions = pd.DataFrame(X_test)  # Convertissez X_test en DataFrame si ce n'est pas déjà le cas
+X_test_with_predictions = pd.concat([X_test_with_predictions, predictions_df], axis=1)
+
+
 ## Validation croisée
 tree_scores = cross_val_score(tree, X_train, y_train, cv=5)
 nn_scores = cross_val_score(nn, X_train, y_train, cv=5)
@@ -90,3 +121,5 @@ print("Score de validation croisée du réseau de neurones : ", nn_scores.mean()
 # Prédiction sur les données de test
 final_model = tree if tree_scores.mean() > nn_scores.mean() else nn
 final_predictions = final_model.predict(X_test)
+
+
